@@ -1,62 +1,115 @@
-import { DemoResponse } from "@shared/api";
-import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { useMemo, useState } from "react";
+import {
+  Activity,
+  ArrowDown,
+  ArrowRight,
+  BatteryCharging,
+  Check,
+  ChevronRight,
+  CircleHelp,
+  Gauge,
+  GitBranch,
+  Layers3,
+  MapPin,
+  Menu,
+  Play,
+  RotateCcw,
+  ShieldCheck,
+  SlidersHorizontal,
+  Sparkles,
+  Thermometer,
+  Zap,
+} from "lucide-react";
+
+type Vehicle = {
+  battery: number;
+  soc: number;
+  mass: number;
+  payload: number;
+  temperature: number;
+  speed: number;
+  mode: string;
+};
+
+const defaults: Vehicle = { battery: 40, soc: 72, mass: 1500, payload: 350, temperature: 32, speed: 50, mode: "Normal" };
+const routes = [
+  { id: "A", name: "Fastest route", distance: 22, factor: 1.12, riskBias: 14, color: "#72849b" },
+  { id: "B", name: "Lowest energy", distance: 25, factor: 0.91, riskBias: 5, color: "#54b6d9" },
+  { id: "C", name: "TwinShield recommended", distance: 27, factor: 0.97, riskBias: 0, color: "#b9f45c" },
+];
+const scenarios = [
+  { name: "Normal conditions", short: "NORMAL", traffic: 1, payload: 0, temp: 0, gradient: 0 },
+  { name: "Heavy traffic", short: "TRAFFIC", traffic: 1.22, payload: 0, temp: 0, gradient: 0 },
+  { name: "High payload", short: "PAYLOAD", traffic: 1, payload: 450, temp: 0, gradient: 0 },
+  { name: "High temperature", short: "TEMP", traffic: 1, payload: 0, temp: 14, gradient: 0 },
+  { name: "Steep gradient", short: "GRADIENT", traffic: 1, payload: 0, temp: 0, gradient: 0.15 },
+  { name: "Combined worst case", short: "WORST CASE", traffic: 1.24, payload: 450, temp: 14, gradient: 0.15 },
+];
+
+function energyFor(route: (typeof routes)[number], vehicle: Vehicle, scenario = scenarios[0]) {
+  const massFactor = 1 + ((vehicle.mass + vehicle.payload + scenario.payload) - 1500) / 10000;
+  const tempFactor = 1 + Math.max(0, vehicle.temperature + scenario.temp - 20) * 0.006;
+  const speedFactor = 1 + Math.max(0, vehicle.speed - 45) * 0.008;
+  return route.distance * 0.16 * route.factor * massFactor * tempFactor * speedFactor * scenario.traffic * (1 + scenario.gradient);
+}
+
+function risk(margin: number) { return margin >= 40 ? "LOW" : margin >= 20 ? "MEDIUM" : "HIGH"; }
 
 export default function Index() {
-  const [exampleFromServer, setExampleFromServer] = useState("");
-  // Fetch users on component mount
-  useEffect(() => {
-    fetchDemo();
-  }, []);
+  const [vehicle, setVehicle] = useState<Vehicle>(defaults);
+  const [simulated, setSimulated] = useState(true);
+  const [stressTested, setStressTested] = useState(false);
+  const [demoRunning, setDemoRunning] = useState(false);
+  const [mobileNav, setMobileNav] = useState(false);
 
-  // Example of how to fetch data from the server (if needed)
-  const fetchDemo = async () => {
-    try {
-      const response = await fetch("/api/demo");
-      const data = (await response.json()) as DemoResponse;
-      setExampleFromServer(data.message);
-    } catch (error) {
-      console.error("Error fetching hello:", error);
-    }
-  };
+  const routeResults = useMemo(() => routes.map((route) => {
+    const predicted = energyFor(route, vehicle);
+    const worst = energyFor(route, vehicle, scenarios[5]);
+    const available = vehicle.battery * vehicle.soc / 100;
+    const margin = Math.max(0, ((available - worst) / available) * 100);
+    const normalMargin = Math.max(0, ((available - predicted) / available) * 100);
+    const score = Math.round(Math.min(99, normalMargin * 0.35 + margin * 0.65 + (route.id === "C" ? 8 : 0)));
+    return { ...route, predicted, worst, margin, normalMargin, score, risk: risk(margin) };
+  }), [vehicle]);
+  const recommended = routeResults[2];
+  const available = vehicle.battery * vehicle.soc / 100;
+  const currentScore = simulated ? recommended.score : 0;
+  const update = (key: keyof Vehicle, value: string) => setVehicle((v) => ({ ...v, [key]: key === "mode" ? value : Number(value) }));
+
+  const runDemo = () => { setDemoRunning(true); setSimulated(false); setStressTested(false); setTimeout(() => { setSimulated(true); setStressTested(true); setDemoRunning(false); }, 750); };
+  const reset = () => { setVehicle(defaults); setSimulated(true); setStressTested(false); };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200">
-      <div className="text-center">
-        {/* TODO: FUSION_GENERATION_APP_PLACEHOLDER replace everything here with the actual app! */}
-        <h1 className="text-2xl font-semibold text-slate-800 flex items-center justify-center gap-3">
-          <svg
-            className="animate-spin h-8 w-8 text-slate-400"
-            viewBox="0 0 50 50"
-          >
-            <circle
-              className="opacity-30"
-              cx="25"
-              cy="25"
-              r="20"
-              stroke="currentColor"
-              strokeWidth="5"
-              fill="none"
-            />
-            <circle
-              className="text-slate-600"
-              cx="25"
-              cy="25"
-              r="20"
-              stroke="currentColor"
-              strokeWidth="5"
-              fill="none"
-              strokeDasharray="100"
-              strokeDashoffset="75"
-            />
-          </svg>
-          Generating your app...
-        </h1>
-        <p className="mt-4 text-slate-600 max-w-md">
-          Watch the chat on the left for updates that might need your attention
-          to finish generating
-        </p>
-        <p className="mt-4 hidden max-w-md">{exampleFromServer}</p>
-      </div>
+    <div className="min-h-screen bg-[#071018] text-slate-100 selection:bg-cyan-300 selection:text-[#071018]">
+      <header className="sticky top-0 z-20 border-b border-white/[0.07] bg-[#071018]/90 backdrop-blur-xl">
+        <div className="mx-auto flex h-[74px] max-w-[1440px] items-center justify-between px-5 lg:px-10">
+          <Link to="#top" className="flex items-center gap-3"><div className="grid h-9 w-9 place-items-center rounded-xl bg-[#b9f45c] text-[#071018]"><ShieldCheck size={22} strokeWidth={2.5} /></div><div><div className="font-display text-base font-bold tracking-[0.2em] text-white">TWINSHIELD</div><div className="hidden text-[9px] uppercase tracking-[0.18em] text-slate-500 sm:block">Route resilience system</div></div></Link>
+          <nav className={`${mobileNav ? "absolute left-0 right-0 top-[74px] flex" : "hidden"} flex-col gap-4 border-b border-white/[0.07] bg-[#09141e] p-5 md:static md:flex md:flex-row md:items-center md:border-0 md:bg-transparent md:p-0`}>
+            <Link to="#simulator" className="nav-link">Digital twin</Link><Link to="#routes" className="nav-link">Routes</Link><Link to="#stress" className="nav-link">Break the route</Link><Link to="#architecture" className="nav-link">System</Link>
+          </nav>
+          <div className="flex items-center gap-3"><button onClick={runDemo} className="hidden rounded-lg border border-[#b9f45c]/40 px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-[#b9f45c] transition hover:bg-[#b9f45c]/10 sm:block">Demo mode</button><button onClick={() => setMobileNav(!mobileNav)} className="rounded-lg border border-white/10 p-2 text-slate-300 md:hidden"><Menu size={18} /></button><div className="hidden items-center gap-2 text-[10px] uppercase tracking-wider text-slate-500 lg:flex"><span className="h-2 w-2 rounded-full bg-[#b9f45c] shadow-[0_0_10px_#b9f45c]" /> Prototype online</div></div>
+        </div>
+      </header>
+
+      <main id="top" className="mx-auto max-w-[1440px] px-5 pb-20 lg:px-10">
+        <section className="grid min-h-[570px] items-center gap-12 py-16 lg:grid-cols-[1fr_1.08fr] lg:py-20">
+          <div><div className="mb-7 flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[#54b6d9]"><span className="h-px w-9 bg-[#54b6d9]" /> Counterfactual mobility intelligence</div><h1 className="font-display max-w-3xl text-5xl font-bold leading-[0.98] tracking-[-0.05em] text-white sm:text-7xl">Don’t just predict<br />the journey. <span className="text-[#b9f45c]">Simulate</span><br />how it can fail.</h1><p className="mt-7 max-w-xl text-base leading-7 text-slate-400">TwinShield creates a virtual EV, simulates candidate routes, stress-tests them against changing conditions, and recommends the route that remains safest under uncertainty.</p><div className="mt-9 flex flex-wrap gap-3"><Link to="#simulator" className="btn-primary">Launch digital twin <ArrowRight size={16} /></Link><Link to="#stress" className="btn-secondary"><Play size={14} fill="currentColor" /> Run what-if simulation</Link></div><div className="mt-12 grid max-w-lg grid-cols-3 gap-4 border-t border-white/10 pt-5">{[[Layers3, "Digital twin", "Virtual EV representation"], [Activity, "Counterfactual", "Test conditions before"], [ShieldCheck, "Resilience", "Choose what survives"]].map(([Icon, title, desc]) => <div key={title as string}><Icon size={17} className="mb-3 text-[#54b6d9]" /><div className="text-xs font-bold text-slate-200">{title as string}</div><div className="mt-1 text-[10px] leading-4 text-slate-500">{desc as string}</div></div>)}</div></div>
+          <div className="relative mx-auto w-full max-w-[580px] rounded-2xl border border-white/10 bg-[#0b1924] p-4 shadow-2xl shadow-cyan-950/20"><div className="mb-3 flex items-center justify-between border-b border-white/[0.08] pb-3"><div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400"><span className="h-2 w-2 rounded-full bg-[#b9f45c]" /> Live twin simulation</div><span className="font-mono text-[10px] text-slate-600">TS / 04-23-26</span></div><div className="relative h-[310px] overflow-hidden rounded-xl border border-white/[0.07] bg-[#08121a]"><div className="absolute inset-0 opacity-30" style={{ backgroundImage: "linear-gradient(#19303a 1px, transparent 1px), linear-gradient(90deg, #19303a 1px, transparent 1px)", backgroundSize: "38px 38px" }} /><svg viewBox="0 0 600 310" className="absolute inset-0 h-full w-full"><path d="M-20 265 C80 245 80 180 168 198 S265 270 325 218 S398 86 485 127 S550 170 635 70" fill="none" stroke="#1e3b47" strokeWidth="26" /><path d="M-20 265 C80 245 80 180 168 198 S265 270 325 218 S398 86 485 127 S550 170 635 70" fill="none" stroke="#b9f45c" strokeDasharray="8 8" strokeWidth="3" /><path d="M-20 265 C80 245 80 180 168 198 S265 270 325 218 S398 86 485 127 S550 170 635 70" fill="none" stroke="#54b6d9" strokeDasharray="2 11" strokeWidth="2" transform="translate(0, 18)" /><circle cx="168" cy="198" r="6" fill="#54b6d9" /><circle cx="485" cy="127" r="6" fill="#b9f45c" /><circle cx="325" cy="218" r="8" fill="#071018" stroke="#fff" strokeWidth="2" /><text x="150" y="180" fill="#87a3ae" fontSize="10">START</text><text x="470" y="108" fill="#b9f45c" fontSize="10">DESTINATION</text></svg><div className="absolute bottom-4 left-4 rounded-lg border border-white/10 bg-[#0b1924]/90 px-3 py-2 text-[10px] text-slate-400"><div className="mb-1 font-bold uppercase tracking-wider text-[#b9f45c]">Route C / Stable</div>27 km <span className="px-1 text-slate-600">•</span> 4.9 kWh predicted</div><div className="absolute right-4 top-4 rounded-lg border border-[#b9f45c]/20 bg-[#b9f45c]/[0.08] px-3 py-2 text-right"><div className="text-[9px] uppercase tracking-widest text-[#b9f45c]">Resilience score</div><div className="font-display text-3xl font-bold text-white">{currentScore || 87}</div></div></div></div>
+        </section>
+
+        <section id="simulator" className="scroll-mt-24 border-t border-white/[0.07] py-14"><div className="mb-8 flex flex-wrap items-end justify-between gap-4"><div><div className="eyebrow">01 / Configure</div><h2 className="section-title">EV digital twin</h2><p className="section-subtitle">Configure your virtual vehicle and simulate the journey.</p></div><button onClick={reset} className="flex items-center gap-2 text-xs text-slate-500 transition hover:text-white"><RotateCcw size={14} /> Reset parameters</button></div><div className="grid gap-5 lg:grid-cols-[330px_1fr]"><div className="panel p-5"><div className="mb-5 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-white"><SlidersHorizontal size={15} className="text-[#54b6d9]" /> Vehicle parameters</div><div className="grid grid-cols-2 gap-x-3 gap-y-4">{[["battery", "Battery capacity", "kWh"], ["soc", "Battery SOC", "%"], ["mass", "Vehicle mass", "kg"], ["payload", "Payload", "kg"], ["temperature", "Temperature", "°C"], ["speed", "Average speed", "km/h"]].map(([key, label, unit]) => <label key={key} className="block"><span className="mb-1.5 block text-[10px] uppercase tracking-wider text-slate-500">{label}</span><div className="relative"><input type="number" value={vehicle[key as keyof Vehicle] as number} onChange={(e) => update(key as keyof Vehicle, e.target.value)} className="field w-full pr-10" /><span className="absolute right-3 top-2.5 text-[10px] text-slate-600">{unit}</span></div></label>)}</div><label className="mt-4 block"><span className="mb-1.5 block text-[10px] uppercase tracking-wider text-slate-500">Driving mode</span><select value={vehicle.mode} onChange={(e) => update("mode", e.target.value)} className="field w-full"><option>Normal</option><option>Eco</option><option>Sport</option></select></label><button onClick={() => { setSimulated(true); setStressTested(false); }} className="btn-primary mt-6 w-full justify-center">Simulate journey <Zap size={15} fill="currentColor" /></button><div className="mt-4 flex gap-2 text-[10px] leading-4 text-slate-500"><CircleHelp size={14} className="shrink-0 text-slate-600" /> Simplified prototype EV energy model — not a certified automotive model.</div></div><div className="panel relative min-h-[360px] overflow-hidden p-5"><div className="flex justify-between"><div><div className="eyebrow text-[#54b6d9]">Twin status</div><div className="mt-2 font-display text-2xl font-bold text-white">Virtual EV / TS-042</div></div><div className="flex h-fit items-center gap-2 rounded-full border border-[#b9f45c]/20 bg-[#b9f45c]/[0.07] px-3 py-1.5 text-[10px] uppercase tracking-wider text-[#b9f45c]"><span className="h-1.5 w-1.5 rounded-full bg-[#b9f45c]" /> {simulated ? "Simulation ready" : "Awaiting input"}</div></div><div className="mt-10 grid gap-7 sm:grid-cols-[1fr_180px]"><div><div className="mb-2 flex justify-between text-[10px] uppercase tracking-wider text-slate-500"><span>Available energy</span><span className="font-mono text-slate-300">{available.toFixed(1)} / {vehicle.battery} kWh</span></div><div className="h-2 overflow-hidden rounded-full bg-white/[0.08]"><div className="h-full rounded-full bg-gradient-to-r from-[#54b6d9] to-[#b9f45c] transition-all" style={{ width: `${vehicle.soc}%` }} /></div><div className="mt-8 grid grid-cols-3 gap-3">{[[BatteryCharging, "SOC", `${vehicle.soc}%`], [Gauge, "Efficiency", `${(available / (recommended.predicted || 1)).toFixed(1)}x`], [Thermometer, "Temp", `${vehicle.temperature}°C`]].map(([Icon, label, value]) => <div key={label as string} className="border-l border-white/10 pl-3"><Icon size={15} className="mb-2 text-[#54b6d9]" /><div className="text-[10px] uppercase text-slate-500">{label as string}</div><div className="mt-1 font-mono text-sm text-white">{value as string}</div></div>)}</div></div><div className="relative mx-auto hidden h-36 w-36 place-items-center rounded-full border border-[#54b6d9]/30 sm:grid"><div className="absolute inset-2 rounded-full border border-dashed border-white/10" /><div className="text-center"><Zap size={23} className="mx-auto mb-1 text-[#b9f45c]" /><div className="font-mono text-xl font-bold text-white">{vehicle.soc}%</div><div className="text-[9px] uppercase tracking-wider text-slate-500">battery</div></div></div></div><div className="absolute bottom-5 right-5 font-mono text-[9px] text-slate-600">MODEL / PROTOTYPE ENERGY v0.8</div></div></div></section>
+
+        <section id="routes" className="scroll-mt-24 py-14"><div className="mb-7 flex items-end justify-between"><div><div className="eyebrow">02 / Navigate uncertainty</div><h2 className="section-title">Prototype simulation routes</h2><p className="section-subtitle">Three candidates. One route that survives the unknowns.</p></div><div className="hidden items-center gap-2 text-[10px] uppercase tracking-wider text-slate-500 sm:flex"><MapPin size={14} className="text-[#54b6d9]" /> Start <ArrowRight size={13} /> Destination</div></div><div className="panel mb-5 h-[245px] overflow-hidden p-0"><div className="relative h-full" style={{ backgroundImage: "linear-gradient(#19303a 1px, transparent 1px), linear-gradient(90deg, #19303a 1px, transparent 1px)", backgroundSize: "42px 42px" }}><svg viewBox="0 0 1200 245" className="h-full w-full"><path d="M65 193 C160 165 144 98 250 122 S390 220 482 164 S583 45 696 91 S825 187 930 130 S1050 56 1140 62" fill="none" stroke="#172b35" strokeWidth="36" /><path d="M65 193 C160 165 144 98 250 122 S390 220 482 164 S583 45 696 91 S825 187 930 130 S1050 56 1140 62" fill="none" stroke="#72849b" strokeWidth="2" strokeDasharray="4 8" /><path d="M65 193 C160 165 144 98 250 122 S390 220 482 164 S583 45 696 91 S825 187 930 130 S1050 56 1140 62" fill="none" stroke="#54b6d9" strokeWidth="3" strokeDasharray="1 14" transform="translate(0, 9)" /><path d="M65 193 C160 165 144 98 250 122 S390 220 482 164 S583 45 696 91 S825 187 930 130 S1050 56 1140 62" fill="none" stroke="#b9f45c" strokeWidth="4" strokeDasharray="120 1000" /><circle cx="65" cy="193" r="7" fill="#54b6d9" /><circle cx="1140" cy="62" r="7" fill="#b9f45c" /><text x="48" y="222" fill="#8195a0" fontSize="11">ORIGIN</text><text x="1080" y="43" fill="#b9f45c" fontSize="11">DESTINATION</text></svg><div className="absolute left-5 top-4 rounded border border-white/10 bg-[#071018]/80 px-2 py-1 font-mono text-[9px] uppercase tracking-wider text-slate-500">Prototype route graph / not GPS data</div></div></div><div className="grid gap-3 md:grid-cols-3">{routeResults.map((route) => <div key={route.id} className={`route-card ${route.id === "C" ? "recommended" : ""}`}><div className="flex items-start justify-between"><div className="flex items-center gap-3"><span className="grid h-8 w-8 place-items-center rounded-lg font-mono text-sm font-bold" style={{ backgroundColor: `${route.color}18`, color: route.color }}>{route.id}</span><div><div className="text-sm font-bold text-white">Route {route.id}</div><div className="text-[10px] text-slate-500">{route.name}</div></div></div>{route.id === "C" && <Check size={17} className="text-[#b9f45c]" />}</div><div className="my-5 grid grid-cols-2 gap-3 border-y border-white/[0.07] py-3"><div><div className="metric-label">Distance</div><div className="metric-value">{route.distance} km</div></div><div><div className="metric-label">Predicted energy</div><div className="metric-value">{route.predicted.toFixed(1)} kWh</div></div></div><div className="flex items-center justify-between"><span className={`risk risk-${route.risk.toLowerCase()}`}><span /> {route.risk} risk</span><span className="font-mono text-xs text-slate-400">{route.margin.toFixed(0)}% margin</span></div></div>)}</div></section>
+
+        <section id="stress" className="scroll-mt-24 border-t border-white/[0.07] py-14"><div className="mb-7 flex flex-wrap items-end justify-between gap-4"><div><div className="eyebrow text-[#ffb86b]">03 / Counterfactual engine</div><h2 className="section-title">Break the route</h2><p className="section-subtitle">Stress-test the journey before reality does.</p></div><button onClick={() => setStressTested(true)} className="btn-warm"><Activity size={16} /> Run stress test</button></div><div className="grid gap-5 lg:grid-cols-[1fr_310px]"><div className="panel p-5"><div className="mb-5 flex items-center justify-between"><div className="text-xs font-bold uppercase tracking-widest text-slate-300">Route C / Scenario matrix</div><div className="text-[10px] uppercase tracking-widest text-slate-600">{stressTested ? "Analysis complete" : "Ready to test"}</div></div><div className="space-y-4">{scenarios.map((scenario, i) => { const e = energyFor(recommended, vehicle, scenario); const margin = Math.max(0, ((available - e) / available) * 100); return <div key={scenario.name} className="grid grid-cols-[95px_1fr_70px] items-center gap-4 sm:grid-cols-[150px_1fr_90px_80px]"><div className="flex items-center gap-2"><span className={`h-1.5 w-1.5 rounded-full ${margin >= 40 ? "bg-[#b9f45c]" : margin >= 20 ? "bg-[#ffb86b]" : "bg-[#ff6b7a]"}`} /><span className="truncate text-[10px] font-bold uppercase tracking-wider text-slate-400">{scenario.name}</span></div><div className="h-2 overflow-hidden rounded-full bg-white/[0.07]"><div className="h-full rounded-full transition-all duration-700" style={{ width: `${stressTested ? margin : 0}%`, background: margin >= 40 ? "#b9f45c" : margin >= 20 ? "#ffb86b" : "#ff6b7a" }} /></div><div className="text-right font-mono text-xs text-slate-300">{stressTested ? `${margin.toFixed(0)}%` : "—"}</div><div className="hidden text-right text-[9px] uppercase text-slate-600 sm:block">{stressTested ? `${e.toFixed(1)} kWh` : "pending"}</div></div>})}</div><div className="mt-6 flex items-center gap-2 border-t border-white/[0.07] pt-4 text-[10px] text-slate-600"><CircleHelp size={13} /> Values shown are prototype simulation outputs.</div></div><div className="panel flex flex-col justify-between bg-gradient-to-br from-[#102b32] to-[#0b1924] p-6"><div><div className="eyebrow text-[#b9f45c]">Decision output</div><div className="mt-3 font-display text-7xl font-bold tracking-[-0.08em] text-white">{currentScore || 87}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#b9f45c]">Route resilience score</div><p className="mt-4 text-xs leading-5 text-slate-400">How well a route maintains energy safety across tested scenarios.</p></div><div className="mt-8 border-t border-white/10 pt-4"><div className="text-[10px] uppercase tracking-wider text-slate-500">Recommended route</div><div className="mt-1 flex items-center justify-between"><span className="font-display text-xl font-bold text-white">ROUTE C</span><ShieldCheck size={20} className="text-[#b9f45c]" /></div><p className="mt-2 text-[11px] leading-5 text-slate-400">Remains within the safe energy threshold across tested counterfactual scenarios.</p></div></div></div></section>
+
+        <section className="grid gap-5 py-14 lg:grid-cols-[1.1fr_0.9fr]"><div className="panel p-5"><div className="eyebrow">04 / Compare</div><h2 className="mt-2 font-display text-2xl font-bold text-white">Route comparison</h2><div className="mt-6 overflow-x-auto"><table className="w-full min-w-[540px] text-left"><thead><tr className="border-b border-white/10 text-[10px] uppercase tracking-wider text-slate-600"><th className="pb-3 font-medium">Metric</th>{routeResults.map(r => <th key={r.id} className={`pb-3 font-medium ${r.id === "C" ? "text-[#b9f45c]" : ""}`}>Route {r.id}</th>)}</tr></thead><tbody className="text-xs">{[["Distance", ...routeResults.map(r => `${r.distance} km`)], ["Energy", ...routeResults.map(r => `${r.predicted.toFixed(1)} kWh`)], ["Normal risk", ...routeResults.map(r => r.risk)], ["Worst-case margin", ...routeResults.map(r => `${r.margin.toFixed(0)}%`)], ["Resilience score", ...routeResults.map(r => r.score)], ["Recommendation", "—", "—", "Recommended"]].map((row, i) => <tr key={row[0]} className="border-b border-white/[0.05]"><td className="py-3 text-slate-500">{row[0]}</td>{row.slice(1).map((cell, j) => <td key={j} className={`py-3 font-mono ${j === 2 ? "font-bold text-[#b9f45c]" : "text-slate-300"}`}>{cell}</td>)}</tr>)}</tbody></table></div></div><div className="panel p-5"><div className="eyebrow">05 / Energy analytics</div><h2 className="mt-2 font-display text-2xl font-bold text-white">Demand by scenario</h2><p className="mt-2 text-xs leading-5 text-slate-500">Energy demand changes with distance, payload, speed, gradient, temperature and traffic.</p><div className="mt-8 flex h-[155px] items-end gap-3 border-b border-l border-white/10 px-4 pb-0">{scenarios.map((s, i) => { const val = energyFor(recommended, vehicle, s); const height = Math.min(100, val / (energyFor(recommended, vehicle, scenarios[5]) || 1) * 100); return <div key={s.short} className="group flex h-full flex-1 flex-col justify-end"><div className="mb-2 text-center font-mono text-[9px] text-slate-500 opacity-0 transition group-hover:opacity-100">{val.toFixed(1)}</div><div className="rounded-t-sm bg-gradient-to-t from-[#26718c] to-[#b9f45c] transition-all duration-500" style={{ height: `${stressTested ? height : 20}%` }} /><div className="mt-3 -rotate-45 origin-top-left whitespace-nowrap text-[8px] uppercase tracking-wider text-slate-600">{s.short}</div></div>})}</div></div></section>
+
+        <section id="architecture" className="scroll-mt-24 border-t border-white/[0.07] py-14"><div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr]"><div><div className="eyebrow">06 / Proposed system</div><h2 className="section-title">From route optimization<br />to <span className="text-[#b9f45c]">route resilience.</span></h2><p className="mt-5 max-w-md text-sm leading-6 text-slate-400">Conventional EV navigation finds the shortest route using current conditions. TwinShield asks a harder question: what could go wrong, and which route still survives?</p></div><div className="grid gap-2 sm:grid-cols-2">{["User input", "EV data + road conditions", "Digital EV twin", "Energy prediction model", "Counterfactual scenario engine", "Route stress testing", "Energy safety margin", "Route resilience score", "Safe route recommendation"].map((item, i) => <div key={item} className={`flex items-center gap-3 rounded-lg border px-4 py-3 ${i === 8 ? "border-[#b9f45c]/30 bg-[#b9f45c]/[0.08] text-[#b9f45c] sm:col-span-2" : "border-white/[0.07] bg-white/[0.02] text-slate-300"}`}><span className="font-mono text-[10px] text-slate-600">0{i + 1}</span><span className="text-xs font-semibold">{item}</span>{i < 8 && <ArrowDown size={13} className="ml-auto text-[#54b6d9] sm:hidden" />}</div>)}</div></div></section>
+      </main>
+      <footer className="border-t border-white/[0.07] bg-[#050c12]"><div className="mx-auto flex max-w-[1440px] flex-col gap-5 px-5 py-8 sm:flex-row sm:items-center sm:justify-between lg:px-10"><div><div className="font-display text-sm font-bold tracking-[0.2em] text-white">TWINSHIELD</div><div className="mt-1 text-[10px] text-slate-600">Counterfactual Digital Twin for EV Route Resilience / Prototype hackathon project</div></div><div className="flex items-center gap-5 text-[10px] uppercase tracking-wider text-slate-600"><span>Python • FastAPI • React • Simulation • AI/ML</span><button className="flex items-center gap-1.5 text-slate-400 transition hover:text-[#b9f45c]"><GitBranch size={13} /> View source code <ChevronRight size={12} /></button></div></div></footer>
+      {demoRunning && <div className="fixed bottom-5 right-5 z-30 flex items-center gap-3 rounded-xl border border-[#b9f45c]/30 bg-[#102b32] px-4 py-3 text-xs text-white shadow-2xl"><Sparkles size={15} className="animate-pulse text-[#b9f45c]" /> Running demo sequence…</div>}
     </div>
   );
 }

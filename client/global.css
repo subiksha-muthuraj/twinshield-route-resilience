@@ -1,121 +1,54 @@
-/** @import must precede all other statements */
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap");
-
+@import url("https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
-
-/* Theme, content globs, and plugins are declared in tailwind.config.ts. */
 @config "../tailwind.config.ts";
 
 @layer base {
-  /**
-   * Tailwind CSS theme
-   * tailwind.config.ts expects the following color variables to be expressed as HSL values.
-   * A different format will require also updating the theme in tailwind.config.ts.
-  */
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-
-    --radius: 0.5rem;
-
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --background: 207 45% 5%;
+    --foreground: 210 40% 96%;
+    --card: 208 39% 9%;
+    --card-foreground: 210 40% 96%;
+    --popover: 208 39% 9%;
+    --popover-foreground: 210 40% 96%;
+    --primary: 79 86% 66%;
+    --primary-foreground: 207 45% 5%;
+    --secondary: 197 61% 59%;
+    --secondary-foreground: 207 45% 5%;
+    --muted: 207 30% 13%;
+    --muted-foreground: 210 16% 54%;
+    --accent: 197 61% 59%;
+    --accent-foreground: 207 45% 5%;
+    --destructive: 354 100% 71%;
+    --destructive-foreground: 210 40% 96%;
+    --border: 207 22% 18%;
+    --input: 207 22% 18%;
+    --ring: 79 86% 66%;
+    --radius: 0.75rem;
   }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
+  * { @apply border-border; }
+  html { scroll-behavior: smooth; }
+  body { @apply bg-background text-foreground; font-family: "Manrope", sans-serif; }
+  button, a, input, select { font-family: inherit; }
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-
-  body {
-    @apply bg-background text-foreground;
-  }
-
-  :where(p, span, li, h1, h2, h3, h4, h5, h6, a, button, label, td, th) {
-    overflow-wrap: anywhere;
-    word-break: break-word;
-  }
-
-  pre,
-  code {
-    overflow-x: auto;
-    white-space: pre;
-  }
+@layer components {
+  .font-display { font-family: "Manrope", sans-serif; }
+  .nav-link { @apply text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 transition hover:text-white; }
+  .eyebrow { @apply text-[10px] font-bold uppercase tracking-[0.2em] text-[#54b6d9]; }
+  .section-title { @apply mt-2 font-display text-3xl font-bold tracking-[-0.04em] text-white sm:text-4xl; }
+  .section-subtitle { @apply mt-2 text-sm text-slate-500; }
+  .panel { @apply rounded-2xl border border-white/[0.09] bg-[#0b1924]/80 shadow-xl shadow-black/10; }
+  .btn-primary { @apply inline-flex items-center gap-2 rounded-lg bg-[#b9f45c] px-5 py-3 text-xs font-extrabold uppercase tracking-wider text-[#071018] transition hover:bg-[#d0ff87] hover:shadow-[0_0_24px_rgba(185,244,92,0.22)]; }
+  .btn-secondary { @apply inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-5 py-3 text-xs font-bold uppercase tracking-wider text-slate-300 transition hover:border-white/20 hover:bg-white/[0.07] hover:text-white; }
+  .btn-warm { @apply inline-flex items-center gap-2 rounded-lg border border-[#ffb86b]/40 bg-[#ffb86b]/[0.08] px-4 py-3 text-xs font-extrabold uppercase tracking-wider text-[#ffb86b] transition hover:bg-[#ffb86b]/[0.16]; }
+  .field { @apply rounded-lg border border-white/10 bg-[#071018] px-3 py-2 text-sm text-white outline-none transition focus:border-[#54b6d9] focus:ring-1 focus:ring-[#54b6d9]/50; }
+  .route-card { @apply rounded-xl border border-white/[0.09] bg-[#0b1924] p-4 transition hover:-translate-y-0.5 hover:border-white/20; }
+  .route-card.recommended { @apply border-[#b9f45c]/40 bg-gradient-to-br from-[#122a2b] to-[#0b1924] shadow-[0_0_28px_rgba(185,244,92,0.07)]; }
+  .metric-label { @apply text-[9px] uppercase tracking-wider text-slate-600; }
+  .metric-value { @apply mt-1 font-mono text-sm text-slate-200; }
+  .risk { @apply inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider; }
+  .risk span { @apply h-1.5 w-1.5 rounded-full; }
+  .risk-low { @apply text-[#b9f45c]; } .risk-low span { @apply bg-[#b9f45c]; }
+  .risk-medium { @apply text-[#ffb86b]; } .risk-medium span { @apply bg-[#ffb86b]; }
+  .risk-high { @apply text-[#ff6b7a]; } .risk-high span { @apply bg-[#ff6b7a]; }
 }
